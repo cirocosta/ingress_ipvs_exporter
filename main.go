@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/alexflint/go-arg"
+	_ "github.com/cirocosta/ipvs_exporter/collector"
 )
 
 type config struct {

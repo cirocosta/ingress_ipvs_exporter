@@ -1,14 +1,26 @@
 hash: 7e540a4cdca1d4ed750d55bd9ffff2df8734eebcb2d59c35748ec3157438487d
-updated: 2018-04-17T11:23:48.461825835Z
+updated: 2018-04-17T11:27:17.553009786Z
 imports:
 - name: github.com/alexflint/go-arg
   version: b1eda2c7b64c118d56472c1944054bf9235d6c48
 - name: github.com/alexflint/go-scalar
   version: 45e5d6cd8605faef82fda2bacc59e734a0b6f1f0
+- name: github.com/beorn7/perks
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  subpackages:
+  - quantile
 - name: github.com/docker/libnetwork
   version: c15b372ef22125880d378167dde44f4b134e1a77
   subpackages:
   - ipvs
+- name: github.com/golang/protobuf
+  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  subpackages:
+  - proto
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/prometheus/client_golang
@@ -16,6 +28,22 @@ imports:
   subpackages:
   - prometheus
   - prometheus/promhttp
+- name: github.com/prometheus/client_model
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: d0f7cd64bda49e08b22ae8a730aa57aa0db125d6
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: 8b1c2da0d56deffdbb9e48d4414b4e674bd8083e
+  subpackages:
+  - internal/util
+  - nfs
+  - xfs
 - name: github.com/rs/zerolog
   version: 05eafee0eb17d0150591a8f30f0fa592cc9b7471
   subpackages:

@@ -1,9 +1,11 @@
 package collector
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
@@ -39,6 +41,7 @@ func New(cfg CollectorConfig) (collector Collector, err error) {
 	return
 }
 
-func (c Collector) Start () (err error) {
+func (c Collector) Start() (err error) {
+	http.Handle(c.telemetryPath, promhttp.Handler())
 	return
 }
