@@ -1,8 +1,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/alexflint/go-arg"
-	_ "github.com/cirocosta/ipvs_exporter/exporter"
+	"github.com/rs/zerolog"
+
+	. "github.com/cirocosta/ipvs_exporter/exporter"
 )
 
 type config struct {
@@ -15,8 +19,29 @@ var (
 		ListenAddress: ":9100",
 		TelemetryPath: "/metrics",
 	}
+	logger = zerolog.New(os.Stdout)
 )
+
+func must(err error) {
+	if err == nil {
+		return
+	}
+
+	logger.Error().
+		Err(err).
+		Msg("main execution failed")
+	os.Exit(1)
+}
 
 func main() {
 	arg.MustParse(args)
+
+	exporter, err := NewExporter(ExporterConfig{
+		ListenAddress: args.ListenAddress,
+		TelemetryPath: args.TelemetryPath,
+	})
+	must(err)
+
+	err = exporter.Listen()
+	must(err)
 }
