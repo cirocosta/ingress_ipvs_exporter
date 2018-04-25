@@ -31,14 +31,19 @@ func TestCollectorNew(t *testing.T) {
 		shouldError bool
 	}{
 		{
+			desc:        "succeeds with no namespace path",
+			namespace:   "",
+			shouldError: false,
+		},
+		{
 			desc:        "fails if ns doesnt exist",
 			namespace:   "something-inexistent",
 			shouldError: true,
 		},
 		{
 			desc:        "succeeds if ns exists",
-			namespace:   existingNamespace,
-			shouldError: true,
+			namespace:   "/var/run/netns/" + existingNamespace,
+			shouldError: false,
 		},
 	}
 
