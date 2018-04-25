@@ -4,3 +4,9 @@
 
 <br/>
 
+### Developing
+
+Make sure you have the necessary permissions to run `modprobe`. 
+
+Usually, that means that you need to execute `make test` as a superuser. Using `sudo`, make sure that `$PATH` is properly set - an easy way of doing so is modifying `/etc/sudoers` and adding the Go paths to the secure path.
+
