@@ -1,8 +1,8 @@
 hash: 7e540a4cdca1d4ed750d55bd9ffff2df8734eebcb2d59c35748ec3157438487d
-updated: 2018-04-17T11:27:17.553009786Z
+updated: 2018-04-26T18:08:27.353589674Z
 imports:
 - name: github.com/alexflint/go-arg
-  version: b1eda2c7b64c118d56472c1944054bf9235d6c48
+  version: 074ee5f759999d103724b5594e33901adeb28e73
 - name: github.com/alexflint/go-scalar
   version: 45e5d6cd8605faef82fda2bacc59e734a0b6f1f0
 - name: github.com/beorn7/perks
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/docker/libnetwork
-  version: c15b372ef22125880d378167dde44f4b134e1a77
+  version: 9605f3cf99559473dfa6261de058d155af8e1e32
   subpackages:
   - ipvs
 - name: github.com/golang/protobuf
@@ -33,7 +33,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: d0f7cd64bda49e08b22ae8a730aa57aa0db125d6
+  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -49,4 +49,36 @@ imports:
   subpackages:
   - internal/cbor
   - internal/json
-testImports: []
+- name: github.com/sirupsen/logrus
+  version: 778f2e774c725116edbc3d039dc0dfc1cc62aae8
+- name: github.com/vishvananda/netlink
+  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
+  subpackages:
+  - nl
+- name: github.com/vishvananda/netns
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
+- name: golang.org/x/crypto
+  version: dccd99e89d39b13e12f1103c72e3bc49eb40a833
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/sys
+  version: bb9c189858d91f42db229b04d45a4c3d23a7662a
+  subpackages:
+  - unix
+  - windows
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  subpackages:
+  - assert
+  - require
+  - vendor/github.com/davecgh/go-spew/spew
+  - vendor/github.com/pmezard/go-difflib/difflib

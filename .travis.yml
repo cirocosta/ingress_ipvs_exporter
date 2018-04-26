@@ -1,0 +1,22 @@
+sudo: 'required'
+
+services:
+  - 'docker'
+
+before_install:
+  - './.travis/main.sh'
+
+script:
+  - 'sudo make test'
+
+after_script:
+  - 'make image'
+
+deploy:
+  provider: 'script'
+  script: 'make push'
+  on:
+    branch: 'master'
+
+notifications:
+  email: false
