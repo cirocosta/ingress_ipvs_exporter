@@ -58,6 +58,11 @@ func (c *Collector) GetStatistics() (stats []Statistic, err error) {
 		return
 	}
 
+	c.logger.Debug().
+		Str("namespace", c.namespacePath).
+		Int("services", len(services)).
+		Msg("collecting statistics from services")
+
 	if len(services) == 0 {
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
@@ -12,12 +13,16 @@ import (
 type ExporterConfig struct {
 	ListenAddress string
 	TelemetryPath string
+	Collector     *Collector
 }
 
 type Exporter struct {
 	listenAddress string
 	telemetryPath string
+	collector     *Collector
 	logger        zerolog.Logger
+
+	connectionsCounter *prometheus.CounterVec
 }
 
 func NewExporter(cfg ExporterConfig) (exporter Exporter, err error) {
@@ -31,6 +36,12 @@ func NewExporter(cfg ExporterConfig) (exporter Exporter, err error) {
 		return
 	}
 
+	if cfg.Collector == nil {
+		err = errors.Errorf("Collector must be specified")
+		return
+	}
+
+	exporter.collector = cfg.Collector
 	exporter.listenAddress = cfg.ListenAddress
 	exporter.telemetryPath = cfg.TelemetryPath
 	exporter.logger = zerolog.New(os.Stdout).
@@ -38,23 +49,36 @@ func NewExporter(cfg ExporterConfig) (exporter Exporter, err error) {
 		Str("from", "exporter").
 		Logger()
 
+	exporter.connectionsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "connections_total",
+		Help:      "The total number of connections made",
+		Subsystem: "ipvs",
+	}, nil)
+
 	return
 }
 
-func (c Exporter) Listen() (err error) {
-	c.logger.Debug().
-		Str("listen-address", c.listenAddress).
-		Str("telemetry-path", c.telemetryPath).
+func (e Exporter) Listen() (err error) {
+	e.logger.Debug().
+		Str("listen-address", e.listenAddress).
+		Str("telemetry-path", e.telemetryPath).
 		Msg("starting http server")
 
-	http.Handle(c.telemetryPath, promhttp.Handler())
-	err = http.ListenAndServe(c.listenAddress, nil)
+	http.Handle(e.telemetryPath, promhttp.Handler())
+	err = http.ListenAndServe(e.listenAddress, nil)
 	if err != nil {
 		err = errors.Wrapf(err,
 			"failed listening on address %s",
-			c.listenAddress)
+			e.listenAddress)
 		return
 	}
+
+	return
+}
+
+func (e Exporter) Collect() (err error) {
+	e.logger.Debug().
+		Msg("starting retrieval")
 
 	return
 }

@@ -12,12 +12,14 @@ import (
 type config struct {
 	ListenAddress string `arg:"--listen-address"`
 	TelemetryPath string `arg:"--telemetry-path"`
+	NamespacePath string `arg:"--namespace-path,required"`
 }
 
 var (
 	args = &config{
 		ListenAddress: ":9100",
 		TelemetryPath: "/metrics",
+		NamespacePath: "",
 	}
 	logger = zerolog.New(os.Stdout)
 )
@@ -36,9 +38,15 @@ func must(err error) {
 func main() {
 	arg.MustParse(args)
 
+	collector, err := NewCollector(CollectorConfig{
+		NamespacePath: args.NamespacePath,
+	})
+	must(err)
+
 	exporter, err := NewExporter(ExporterConfig{
 		ListenAddress: args.ListenAddress,
 		TelemetryPath: args.TelemetryPath,
+		Collector:     &collector,
 	})
 	must(err)
 
