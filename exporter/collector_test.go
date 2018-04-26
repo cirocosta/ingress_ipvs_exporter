@@ -135,6 +135,7 @@ func TestCollectorGetStats(t *testing.T) {
 
 	createNamespace(emptyNamespace)
 	createNamespace(ipvsNamespace)
+	setupIPVSInNamespace(ipvsNamespace)
 	defer func() {
 		deleteNamespace(emptyNamespace)
 		deleteNamespace(ipvsNamespace)
@@ -143,14 +144,14 @@ func TestCollectorGetStats(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			collector, err := NewCollector(CollectorConfig{
-				NamespacePath: "/var/run/netns/" + emptyNamespace,
+				NamespacePath: tc.namespace,
 			})
 			require.NoError(t, err)
 			require.NotNil(t, collector)
 
 			stats, err = collector.GetStatistics()
 			assert.NoError(t, err)
-			assert.Empty(t, stats)
+			assert.Len(t, stats, tc.numberOfStatistics)
 		})
 	}
 }
