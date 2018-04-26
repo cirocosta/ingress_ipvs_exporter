@@ -4,6 +4,10 @@
 
 <br/>
 
+### Overview
+
+`ipvs_exporter` is a Prometheus exporter focused on delivering statistics gathered via netlink regarding IPVS services that live inside network namespaces.
+
 ### Developing
 
 Make sure you have the necessary permissions to run `modprobe`. 

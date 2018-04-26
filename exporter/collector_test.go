@@ -9,19 +9,59 @@ import (
 )
 
 const (
-	existingNamespace = "myns"
+	emptyNamespace = "empty-ns"
+	ipvsNamespace  = "ipvs-ns"
 )
 
-func setup(t *testing.T) {
-	cmd := exec.Command("ip", "netns", "add", existingNamespace)
-	err := cmd.Run()
-	require.NoError(t, err)
+func createNamespace(namespace string) (err error) {
+	var (
+		createNetworkNamespaceCommand = exec.Command(
+			"ip", "netns", "add", namespace)
+		turnLoopbackUpInNamespaceCommand = exec.Command(
+			"ip", "netns", "exec", namespace,
+			"ip", "link", "set", "dev", "lo", "up")
+	)
+
+	err = createNetworkNamespaceCommand.Run()
+	if err != nil {
+		return
+	}
+
+	err = turnLoopbackUpInNamespaceCommand.Run()
+	return
 }
 
-func tearDown(t *testing.T) {
-	cmd := exec.Command("ip", "netns", "del", existingNamespace)
-	err := cmd.Run()
-	require.NoError(t, err)
+func deleteNamespace(namespace string) (err error) {
+	var (
+		deleteNetworkNamespaceCommand = exec.Command(
+			"ip", "netns", "del", namespace)
+	)
+
+	err = deleteNetworkNamespaceCommand.Run()
+	return
+}
+
+func setupIPVSInNamespace(namespace string) (err error) {
+	var (
+		createVirtualServer = exec.Command(
+			"ip", "netns", "exec", namespace,
+			"ipvsadm", "-A",
+			"-t", "127.0.0.1:80",
+			"-s", "rr")
+		addRealServer = exec.Command(
+			"ip", "netns", "exec", namespace,
+			"ipvsadm", "-a",
+			"-t", "127.0.0.1:80",
+			"-r", "127.0.0.2")
+	)
+
+	err = createVirtualServer.Run()
+	if err != nil {
+		return
+	}
+
+	err = addRealServer.Run()
+	return
 }
 
 func TestCollectorNew(t *testing.T) {
@@ -43,7 +83,7 @@ func TestCollectorNew(t *testing.T) {
 			},
 			{
 				desc:        "succeeds if ns exists",
-				namespace:   "/var/run/netns/" + existingNamespace,
+				namespace:   "/var/run/netns/" + emptyNamespace,
 				shouldError: false,
 			},
 		}
@@ -51,8 +91,10 @@ func TestCollectorNew(t *testing.T) {
 		collector Collector
 	)
 
-	setup(t)
-	defer tearDown(t)
+	createNamespace(emptyNamespace)
+	defer func() {
+		deleteNamespace(emptyNamespace)
+	}()
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -73,25 +115,35 @@ func TestCollectorNew(t *testing.T) {
 func TestCollectorGetStats(t *testing.T) {
 	var (
 		testCases = []struct {
-			desc string
+			desc               string
+			namespace          string
+			numberOfStatistics int
 		}{
 			{
-				desc: "empty stats in brand new ns",
+				desc:               "empty stats in brand new ns",
+				namespace:          "/var/run/netns/" + emptyNamespace,
+				numberOfStatistics: 0,
 			},
 			{
-				desc: "zero-ed single stat if single service created",
+				desc:               "zero-ed single stat if single service created",
+				namespace:          "/var/run/netns/" + ipvsNamespace,
+				numberOfStatistics: 1,
 			},
 		}
 		stats []Statistic
 	)
 
-	setup(t)
-	defer tearDown(t)
+	createNamespace(emptyNamespace)
+	createNamespace(ipvsNamespace)
+	defer func() {
+		deleteNamespace(emptyNamespace)
+		deleteNamespace(ipvsNamespace)
+	}()
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			collector, err := NewCollector(CollectorConfig{
-				NamespacePath: "/var/run/netns/" + existingNamespace,
+				NamespacePath: "/var/run/netns/" + emptyNamespace,
 			})
 			require.NoError(t, err)
 			require.NotNil(t, collector)
