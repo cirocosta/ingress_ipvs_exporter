@@ -9,12 +9,18 @@ import (
 )
 
 type Collector struct {
-	logger zerolog.Logger
-	ipvs   *ipvs.Handle
+	logger        zerolog.Logger
+	ipvs          *ipvs.Handle
+	namespacePath string
 }
 
 type CollectorConfig struct {
 	NamespacePath string
+}
+
+type Statistic struct {
+	Port uint16
+	ipvs.SvcStats
 }
 
 func NewCollector(cfg CollectorConfig) (c Collector, err error) {
@@ -26,10 +32,43 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		return
 	}
 
+	if c.ipvs == nil {
+		err = errors.Wrapf(err,
+			"created nil ipvs handle for namespace path '%s'",
+			cfg.NamespacePath)
+		return
+	}
+
+	c.namespacePath = cfg.NamespacePath
 	c.logger = zerolog.New(os.Stdout).
 		With().
 		Str("from", "collector").
 		Logger()
+
+	return
+}
+
+func (c *Collector) GetStatistics() (stats []Statistic, err error) {
+	var services []*ipvs.Service
+
+	services, err = c.ipvs.GetServices()
+	if err != nil {
+		err = errors.Wrapf(err, "failed to retrieve ipvs svcs from ns %s",
+			c.namespacePath)
+		return
+	}
+
+	if len(services) == 0 {
+		return
+	}
+
+	stats = make([]Statistic, len(services))
+	for ndx, service := range services {
+		stats[ndx] = Statistic{
+			Port:     service.Port,
+			SvcStats: service.Stats,
+		}
+	}
 
 	return
 }
