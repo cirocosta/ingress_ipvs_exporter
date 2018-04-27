@@ -53,13 +53,6 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		return
 	}
 
-	if c.ipvs == nil {
-		err = errors.Wrapf(err,
-			"created nil ipvs handle for namespace path '%s'",
-			cfg.NamespacePath)
-		return
-	}
-
 	c.namespacePath = cfg.NamespacePath
 	c.logger = zerolog.New(os.Stdout).
 		With().
