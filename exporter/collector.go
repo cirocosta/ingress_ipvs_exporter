@@ -14,15 +14,12 @@ type Collector struct {
 	logger        zerolog.Logger
 	ipvs          *ipvs.Handle
 	namespacePath string
+
+	connectionsTotalDesc *prometheus.Desc
 }
 
 type CollectorConfig struct {
 	NamespacePath string
-}
-
-type Statistic struct {
-	Port uint16
-	ipvs.SvcStats
 }
 
 func NewCollector(cfg CollectorConfig) (c Collector, err error) {
@@ -47,20 +44,18 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		Str("from", "collector").
 		Logger()
 
-	return
-}
-
-var (
-	connectionsTotalDesc = prometheus.NewDesc(
+	c.connectionsTotalDesc = prometheus.NewDesc(
 		"ipvs_connections_total",
 		"The total number of connections made",
 		[]string{"address"},
-		nil,
+		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
-)
+
+	return
+}
 
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- connectionsTotalDesc
+	ch <- c.connectionsTotalDesc
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -88,7 +83,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			Msg("reporting service")
 
 		ch <- prometheus.MustNewConstMetric(
-			connectionsTotalDesc,
+			c.connectionsTotalDesc,
 			prometheus.CounterValue,
 			float64(service.Stats.Connections),
 			strconv.Itoa(int(service.FWMark)),
