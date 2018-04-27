@@ -21,8 +21,6 @@ type Exporter struct {
 	telemetryPath string
 	collector     *Collector
 	logger        zerolog.Logger
-
-	connectionsCounter *prometheus.CounterVec
 }
 
 func NewExporter(cfg ExporterConfig) (exporter Exporter, err error) {
@@ -49,11 +47,11 @@ func NewExporter(cfg ExporterConfig) (exporter Exporter, err error) {
 		Str("from", "exporter").
 		Logger()
 
-	exporter.connectionsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name:      "connections_total",
-		Help:      "The total number of connections made",
-		Subsystem: "ipvs",
-	}, nil)
+	err = prometheus.Register(exporter.collector)
+	if err != nil {
+		err = errors.Wrapf(err, "failed to register ipvs collector")
+		return
+	}
 
 	return
 }
@@ -76,9 +74,7 @@ func (e Exporter) Listen() (err error) {
 	return
 }
 
-func (e Exporter) Collect() (err error) {
-	e.logger.Debug().
-		Msg("starting retrieval")
-
+func (e Exporter) Stop() (err error) {
+	// TODO implement
 	return
 }

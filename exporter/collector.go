@@ -2,9 +2,11 @@ package exporter
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/docker/libnetwork/ipvs"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 )
 
@@ -48,32 +50,51 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 	return
 }
 
-func (c *Collector) GetStatistics() (stats []Statistic, err error) {
-	var services []*ipvs.Service
+var (
+	connectionsTotalDesc = prometheus.NewDesc(
+		"ipvs_connections_total",
+		"The total number of connections made",
+		[]string{"address"},
+		nil,
+	)
+)
+
+func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- connectionsTotalDesc
+}
+
+func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	var (
+		services []*ipvs.Service
+		err      error
+	)
 
 	services, err = c.ipvs.GetServices()
 	if err != nil {
-		err = errors.Wrapf(err, "failed to retrieve ipvs svcs from ns %s",
-			c.namespacePath)
+		c.logger.Error().
+			Err(err).
+			Str("namespace", c.namespacePath).
+			Msg("failed to retrieve ipvs services")
 		return
 	}
-
-	c.logger.Debug().
-		Str("namespace", c.namespacePath).
-		Int("services", len(services)).
-		Msg("collecting statistics from services")
 
 	if len(services) == 0 {
 		return
 	}
 
-	stats = make([]Statistic, len(services))
-	for ndx, service := range services {
-		stats[ndx] = Statistic{
-			Port:     service.Port,
-			SvcStats: service.Stats,
-		}
+	for _, service := range services {
+		c.logger.Debug().
+			Interface("service", service).
+			Msg("reporting service")
+
+		ch <- prometheus.MustNewConstMetric(
+			connectionsTotalDesc,
+			prometheus.CounterValue,
+			float64(service.Stats.Connections),
+			strconv.Itoa(int(service.FWMark)),
+		)
 	}
 
 	return
+
 }

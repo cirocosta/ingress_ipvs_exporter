@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -115,22 +116,22 @@ func TestCollectorNew(t *testing.T) {
 func TestCollectorGetStats(t *testing.T) {
 	var (
 		testCases = []struct {
-			desc               string
-			namespace          string
-			numberOfStatistics int
+			desc            string
+			namespace       string
+			numberOfMetrics int
 		}{
 			{
-				desc:               "empty stats in brand new ns",
-				namespace:          "/var/run/netns/" + emptyNamespace,
-				numberOfStatistics: 0,
+				desc:            "empty stats in brand new ns",
+				namespace:       "/var/run/netns/" + emptyNamespace,
+				numberOfMetrics: 0,
 			},
 			{
-				desc:               "zero-ed single stat if single service created",
-				namespace:          "/var/run/netns/" + ipvsNamespace,
-				numberOfStatistics: 1,
+				desc:            "zero-ed single stat if single service created",
+				namespace:       "/var/run/netns/" + ipvsNamespace,
+				numberOfMetrics: 1,
 			},
 		}
-		stats []Statistic
+		metricsChan chan prometheus.Metric
 	)
 
 	createNamespace(emptyNamespace)
@@ -149,9 +150,9 @@ func TestCollectorGetStats(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, collector)
 
-			stats, err = collector.GetStatistics()
-			assert.NoError(t, err)
-			assert.Len(t, stats, tc.numberOfStatistics)
+			metricsChan = make(chan prometheus.Metric, tc.numberOfMetrics+1)
+			collector.Collect(metricsChan)
+			assert.Len(t, metricsChan, tc.numberOfMetrics)
 		})
 	}
 }
