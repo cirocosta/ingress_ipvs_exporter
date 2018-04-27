@@ -19,6 +19,7 @@ type Collector struct {
 	namespacePath string
 
 	connectionsTotalDesc *prometheus.Desc
+	servicesTotalDesc    *prometheus.Desc
 }
 
 // CollectorConfig provides the necessary configuration for
@@ -61,8 +62,15 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 
 	c.connectionsTotalDesc = prometheus.NewDesc(
 		"ipvs_connections_total",
-		"The total number of connections made",
-		[]string{"address"},
+		"The total number of connections made to a virtual server",
+		[]string{"fwmark"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.servicesTotalDesc = prometheus.NewDesc(
+		"ipvs_services_total",
+		"The total number of services registered in ipvs",
+		nil,
 		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
 
@@ -73,6 +81,7 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 // metric descriptions at the moment of collector registration.
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.connectionsTotalDesc
+	ch <- c.servicesTotalDesc
 }
 
 // Collect is called by Prometheus when collecting metrics.
@@ -94,6 +103,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	ch <- prometheus.MustNewConstMetric(
+		c.servicesTotalDesc,
+		prometheus.GaugeValue,
+		float64(len(services)),
+	)
+
 	if len(services) == 0 {
 		return
 	}
@@ -112,5 +127,4 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	return
-
 }
