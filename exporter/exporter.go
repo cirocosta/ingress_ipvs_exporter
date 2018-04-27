@@ -73,8 +73,3 @@ func (e Exporter) Listen() (err error) {
 
 	return
 }
-
-func (e Exporter) Stop() (err error) {
-	// TODO implement
-	return
-}
