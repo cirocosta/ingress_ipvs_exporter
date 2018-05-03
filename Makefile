@@ -17,7 +17,10 @@ fmt:
 	go fmt ./...
 
 mapper.out: ./port-mapper/main.c
-	gcc $^ -o $@ -isystem /home/ubuntu/iptables/include/ -lip4tc -lxtables
+	gcc $^ \
+		-o $@ \
+		-lip4tc \
+		-lxtables
 
 
 image:
