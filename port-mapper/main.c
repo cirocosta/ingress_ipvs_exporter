@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/errno.h>
 #include <time.h>
-#include <iptables.h>
+#include <xtables.h>
 
 #include "libiptc/libiptc.h"
 
