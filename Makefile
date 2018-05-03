@@ -11,7 +11,14 @@ test:
 	go test -v ./...
 
 fmt:
+	cd ./port-mapper && \
+		find . -name "*.c" -o -name "*.h" | \
+			xargs clang-format -style=file -i
 	go fmt ./...
+
+mapper.out: ./port-mapper/main.c
+	gcc $^ -o $@ -isystem /home/ubuntu/iptables/include/ -lip4tc -lxtables
+
 
 image:
 	docker build -t $(DOCKER_FINAL_IMAGE):$(VERSION) .
