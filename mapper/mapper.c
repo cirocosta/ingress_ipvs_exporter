@@ -133,7 +133,7 @@ m_get_mark_mappings()
 	struct xtc_handle*      handle;
 	const struct ipt_entry* rule;
 	unsigned int            rule_count = 0;
-	m_mark_mappings_t*      mappings;
+	m_mark_mappings_t*      mappings   = NULL;
 
 	// take a snapshot of the iptables rules at the
 	// current point in time
@@ -162,7 +162,7 @@ m_get_mark_mappings()
 
 	// nothing to do if there are no rules
 	if (rule_count == 0) {
-		exit(0);
+		return mappings;
 	}
 
 	// create the mappings holder
