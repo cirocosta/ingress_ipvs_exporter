@@ -50,6 +50,12 @@ typedef struct mark_mappings {
 	m_mark_mapping_t** data;
 } m_mark_mappings_t;
 
+// m_get_mark_mapping_at retrieves a mark_mapping from
+// mark_mappings by accessing `data` and  then retrieving
+// the field.
+m_mark_mapping_t*
+m_get_mark_mapping_at(m_mark_mappings_t* m, __u16 pos);
+
 /**
  * m_new_mark_mappings instantiates a mark_mappings
  * struct that holds an array of mark_mapping instances
