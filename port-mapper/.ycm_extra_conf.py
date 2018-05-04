@@ -13,7 +13,6 @@ flags = [
 '-xc',
 '-I/usr/lib/',
 '-I/usr/include/',
-'-I/home/ubuntu/iptables/include/',
 ]
 
 
