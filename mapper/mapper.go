@@ -7,8 +7,6 @@ import (
 )
 
 import (
-	"unsafe"
-
 	"github.com/pkg/errors"
 )
 
@@ -30,7 +28,7 @@ func Init() (err error) {
 }
 
 func GetMappings() (res []*Mapping) {
-	var i C.ushort = 1
+	var i C.ushort = 0
 
 	mappings := C.m_get_mark_mappings()
 	if mappings == nil {
@@ -44,15 +42,12 @@ func GetMappings() (res []*Mapping) {
 	}
 
 	res = make([]*Mapping, mappings.length)
-	for ; i < mappings.length+1; i++ {
-		ptr := unsafe.Pointer(
-			uintptr(unsafe.Pointer(mappings.data)) +
-				uintptr(struct_size*int(i)))
-		casted := (*C.struct_mark_mapping)(ptr)
+	for ; i < mappings.length; i++ {
+		mapping := C.m_get_mark_mapping_at(mappings, i)
 
-		res[i-1] = &Mapping{
-			DestinationPort: uint16(casted.destination_port),
-			FirewallMark:    uint16(casted.firewall_mark),
+		res[i] = &Mapping{
+			DestinationPort: uint16(mapping.destination_port),
+			FirewallMark:    uint16(mapping.firewall_mark),
 		}
 	}
 

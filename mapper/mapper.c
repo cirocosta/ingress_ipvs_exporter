@@ -7,6 +7,16 @@ struct xt_mark_tginfo2 {
 	__u32 mask;
 };
 
+m_mark_mapping_t*
+m_get_mark_mapping_at(m_mark_mappings_t* m, __u16 pos)
+{
+	if (pos > m->length) {
+		return NULL;
+	}
+
+	return m->data[pos];
+}
+
 m_mark_mappings_t*
 m_new_mark_mappings(__u16 length)
 {

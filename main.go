@@ -44,7 +44,9 @@ func main() {
 
 	mappings := mapper.GetMappings()
 	for _, mapping := range mappings {
-		logger.Info().Interface("mapping", mapping).Msg("yay")
+		logger.Info().
+			Interface("mapping", mapping).
+			Msg("yay")
 	}
 
 	return
