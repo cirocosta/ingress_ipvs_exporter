@@ -1,6 +1,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <libiptc/libiptc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,9 +9,23 @@
 #include <time.h>
 #include <xtables.h>
 
-#include "libiptc/libiptc.h"
+// MAPPER_CHAIN defines the chain that we should
+// look for {destination_port:mark} tuples.
+//
+// The chain is supposed to exist and already be
+// populated within the current network namespace.
+#define MAPPER_CHAIN "PREROUTING"
+
+// MAPPER_CHAIN defines the table to filter the
+// rule lookups.
+//
+// Given that docker swarm perform the packet marking
+// at the mangle table, this is the one we use when
+// looking for the mark definitions.
+#define MAPPER_TABLE "mangle"
 
 struct xtables_globals iptables_globals = { 0 };
+
 struct xt_mark_tginfo2 {
 	__u32 mark, mask;
 };
@@ -20,9 +35,7 @@ main(void)
 {
 	int                err;
 	struct xtc_handle* handle;
-	const char*        chain         = NULL;
-	const char*        table         = "mangle";
-	const char*        desired_chain = "PREROUTING";
+	const char*        chain = NULL;
 
 	iptables_globals.program_name = "p1";
 	err = xtables_init_all(&iptables_globals, NFPROTO_IPV4);
@@ -34,7 +47,7 @@ main(void)
 		exit(1);
 	}
 
-	handle = iptc_init(table);
+	handle = iptc_init(MAPPER_TABLE);
 	if (!handle) {
 		fprintf(stderr,
 		        "failed to initialize table handle: %s\n",
@@ -48,11 +61,9 @@ main(void)
 
 	for (chain = iptc_first_chain(handle); chain;
 	     chain = iptc_next_chain(handle)) {
-		if (strcmp(chain, desired_chain)) {
+		if (strcmp(chain, MAPPER_CHAIN)) {
 			continue;
 		}
-
-		printf("chain=%s\n", chain);
 
 		rule        = iptc_first_rule(chain, handle);
 		rule_target = ipt_get_target((struct ipt_entry*)rule);
