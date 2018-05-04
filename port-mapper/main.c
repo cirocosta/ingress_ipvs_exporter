@@ -195,6 +195,15 @@ _m_chain_exists(struct xtc_handle* handle)
 	return -1;
 }
 
+/**
+ * m_get_mark_mappings retrieves a m_mark_mappings_t instance
+ * that contains all the fwmark mappings as seens by iptables
+ * in the current namespace.
+ *
+ * note.: during the retrieval, allocations are performed. Don't
+ * forget to free the `m_mark_mappings_t` structure after using
+ * it.
+ */
 m_mark_mappings_t*
 m_get_mark_mappings()
 {
