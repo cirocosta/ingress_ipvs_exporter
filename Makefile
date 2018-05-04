@@ -27,7 +27,7 @@ mapper/libmapper.so: ./mapper/mapper.c ./mapper/mapper.h
 		-o $@
 
 
-mapper.out: ./mapper/main.c mapper/libmapper.so
+mapper.out: ./mapper/cmd/main.c mapper/libmapper.so
 	gcc $< \
 		-o $@ \
 		-L./mapper \
