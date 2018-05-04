@@ -19,15 +19,19 @@ fmt:
 	go fmt ./...
 
 
-mapper/mapper.o: ./mapper/mapper.c ./mapper/mapper.h
+mapper/libmapper.so: ./mapper/mapper.c ./mapper/mapper.h
 	gcc $< \
+		-fPIC \
+		-shared \
 		-c \
 		-o $@
 
 
-mapper.out: ./mapper/main.c mapper/mapper.o
-	gcc $^ \
+mapper.out: ./mapper/main.c mapper/libmapper.so
+	gcc $< \
 		-o $@ \
+		-L./mapper \
+		-lmapper \
 		-lip4tc \
 		-lxtables
 

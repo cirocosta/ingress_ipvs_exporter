@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/alexflint/go-arg"
+	"github.com/cirocosta/ipvs_exporter/mapper"
 	"github.com/rs/zerolog"
 
 	. "github.com/cirocosta/ipvs_exporter/exporter"
@@ -37,6 +38,16 @@ func must(err error) {
 
 func main() {
 	arg.MustParse(args)
+
+	err := mapper.Init()
+	must(err)
+
+	mappings := mapper.GetMappings()
+	for _, mapping := range mappings {
+		logger.Info().Interface("mapping", mapping).Msg("yay")
+	}
+
+	return
 
 	collector, err := NewCollector(CollectorConfig{
 		NamespacePath: args.NamespacePath,
