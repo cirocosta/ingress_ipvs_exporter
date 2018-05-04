@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cirocosta/ipvs_exporter/mapper"
 	"github.com/docker/libnetwork/ipvs"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,6 +16,7 @@ import (
 // namespace.
 type Collector struct {
 	logger        zerolog.Logger
+	mapper        *mapper.Mapper
 	ipvs          *ipvs.Handle
 	namespacePath string
 
@@ -54,7 +56,17 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		return
 	}
 
+	fwmarkMapper, err := mapper.NewMapper(mapper.MapperConfig{
+		NamespacePath: cfg.NamespacePath,
+	})
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to create fwmarkmapper")
+		return
+	}
+
 	c.namespacePath = cfg.NamespacePath
+	c.mapper = &fwmarkMapper
 	c.logger = zerolog.New(os.Stdout).
 		With().
 		Str("from", "collector").
@@ -63,7 +75,7 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 	c.connectionsTotalDesc = prometheus.NewDesc(
 		"ipvs_connections_total",
 		"The total number of connections made to a virtual server",
-		[]string{"fwmark"},
+		[]string{"fwmark", "port"},
 		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
 
@@ -113,6 +125,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	mappings, err := c.mapper.GetMappings()
+	if err != nil {
+		c.logger.Error().
+			Err(err).
+			Str("namespace", c.namespacePath).
+			Msg("failed to retrieve iptables mappings")
+		return
+	}
+
 	for _, service := range services {
 		c.logger.Debug().
 			Interface("service", service).
@@ -123,6 +144,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			prometheus.CounterValue,
 			float64(service.Stats.Connections),
 			strconv.Itoa(int(service.FWMark)),
+			strconv.Itoa(int(mappings[service.FWMark])),
 		)
 	}
 
