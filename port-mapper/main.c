@@ -36,23 +36,88 @@ struct xt_mark_tginfo2 {
 	__u32 mask;
 };
 
+/**
+ * m_mark_mapping_t unites both destination_port and
+ * firewall_mark as retrieved from iptables rules.
+ */
 typedef struct mark_mapping {
 	__u16 destination_port;
 	__u32 firewall_mark;
 } m_mark_mapping_t;
 
-int
-m_count_rules()
-{
-	int err = 0;
+/**
+ * m_mark_mappings_t holds an array of mappings and
+ * the array length to facilitate list operations.
+ */
+typedef struct mark_mappings {
+	__u16              length;
+	m_mark_mapping_t** data;
+} m_mark_mappings_t;
 
-	return err;
+/**
+ * m_new_mark_mappings instantiates a mark_mappings
+ * struct that holds an array of mark_mapping instances
+ * with an additional `length` field to auxiliate in
+ * iterations and destruction.
+ */
+m_mark_mappings_t*
+m_new_mark_mappings(__u16 length)
+{
+	m_mark_mappings_t* m = malloc(sizeof *m);
+	if (m == NULL) {
+		goto ERR_ALOC;
+	}
+
+	m->data = malloc(length * sizeof(*m->data));
+	if (m->data == NULL) {
+		goto ERR_ALOC;
+	}
+
+	for (unsigned int i = 0; i < length; i++) {
+		m->data[i] = malloc(sizeof *m->data[i]);
+		if (m->data[i] == NULL) {
+			goto ERR_ALOC;
+		}
+	}
+
+	m->length = length;
+
+	return m;
+
+ERR_ALOC:
+	perror("malloc");
+	fprintf(stderr,
+	        "failed to allocate enough memory for "
+	        "mark mappings\n");
+	exit(1);
 }
 
-int
-m_get_mark_mappings()
+/**
+ * m_destroy_mark_mappings takes care of properly freeing
+ * any allocated memory and settings the respective
+ * pointers to NULL to make sure they're not used
+ * later.
+ */
+void
+m_destroy_mark_mappings(m_mark_mappings_t* m)
 {
-	return 0;
+	if (m == NULL) {
+		return;
+	}
+
+	for (int i = 0; i < m->length; i++) {
+		if (m->data[i] == NULL) {
+			continue;
+		}
+
+		free(m->data[i]);
+		m->data[i] = NULL;
+	}
+
+	free(m->data);
+	m->data = NULL;
+
+	free(m);
 }
 
 int
@@ -87,14 +152,36 @@ m_get_mark_mapping_from_rule(const struct ipt_entry* rule,
 	return 0;
 }
 
+/**
+ * m_init takes care of initializing the internal global
+ * variables that the xtables lib depends on.
+ *
+ * This method is meant to be called only once (at startup,
+ * before executing other methods).
+ *
+ *
+ * TODO what else is performed?
+ */
 int
 m_init()
 {
-	return 0;
+	int err = 0;
+
+	iptables_globals.program_name = M_PROGRAM_NAME;
+	err = xtables_init_all(&iptables_globals, NFPROTO_IPV4);
+	if (err < 0) {
+		return err;
+	}
+
+	return err;
 }
 
+/**
+ * _m_chain_exists is an internal method that verifies whether
+ * the desired chain exists in the current table.
+ */
 int
-m_chain_exists(struct xtc_handle* handle)
+_m_chain_exists(struct xtc_handle* handle)
 {
 	const char* chain = NULL;
 
@@ -108,23 +195,13 @@ m_chain_exists(struct xtc_handle* handle)
 	return -1;
 }
 
-int
-main(void)
+m_mark_mappings_t*
+m_get_mark_mappings()
 {
-	int                     err;
 	struct xtc_handle*      handle;
 	const struct ipt_entry* rule;
 	unsigned int            rule_count = 0;
-
-	iptables_globals.program_name = "fwmark-mapper";
-	err = xtables_init_all(&iptables_globals, NFPROTO_IPV4);
-	if (err < 0) {
-		fprintf(stderr,
-		        "name=%s ver=%s - failed to initialize xtables\n",
-		        iptables_globals.program_name,
-		        iptables_globals.program_version);
-		exit(1);
-	}
+	m_mark_mappings_t*      mappings;
 
 	// take a snapshot of the iptables rules at the
 	// current point in time
@@ -137,7 +214,7 @@ main(void)
 	}
 
 	// check if chain exists
-	if (m_chain_exists(handle) == -1) {
+	if (_m_chain_exists(handle) == -1) {
 		fprintf(stderr,
 		        "expected chain " M_CHAIN
 		        " to look for fwmark mappings doesn't exist\n");
@@ -156,41 +233,43 @@ main(void)
 		exit(0);
 	}
 
-	// allocate a mark_mappings array that can
-	// fit the expected number of rule mappings
-	m_mark_mapping_t** mark_mappings =
-	  malloc(rule_count * sizeof(*mark_mappings));
-	if (mark_mappings == NULL) {
-		perror("malloc");
-		fprintf(stderr,
-		        "failed to allocate enough memory for "
-		        "mark mappings\n");
-		exit(1);
-	}
-	for (unsigned int i = 0; i < rule_count; i++) {
-		mark_mappings[i] = malloc(sizeof *mark_mappings[i]);
-		if (mark_mappings[i] == NULL) {
-			perror("malloc");
-			fprintf(stderr,
-			        "failed to allocate enough memory for "
-			        "mark mapping\n");
-			exit(1);
-		}
-	}
+	// create the mappings holder
+	mappings = m_new_mark_mappings(rule_count);
 
 	// populate the array with the mappings
 	rule = iptc_first_rule(M_CHAIN, handle);
-	for (unsigned int __i = 0; __i < rule_count; __i++) {
-		m_get_mark_mapping_from_rule(rule, mark_mappings[__i]);
+	for (unsigned int i = 0; i < rule_count; i++) {
+		m_get_mark_mapping_from_rule(rule, mappings->data[i]);
 		rule = iptc_next_rule(rule, handle);
 	}
 
-	// show the mappings
-	for (unsigned int __i = 0; __i < rule_count; __i++) {
-		printf("mark=%d,port=%d\n",
-		       mark_mappings[__i]->firewall_mark,
-		       mark_mappings[__i]->destination_port);
+	iptc_free(handle);
+
+	return mappings;
+}
+
+int
+main(void)
+{
+	int err = 0;
+
+	err = m_init();
+	if (err != 0) {
+		fprintf(stderr,
+		        "failed to initialize global xtable variables\n");
+		exit(1);
 	}
+
+	m_mark_mappings_t* mappings = m_get_mark_mappings();
+
+	// show the mappings
+	for (unsigned int i = 0; i < mappings->length; i++) {
+		printf("mark=%d,port=%d\n",
+		       mappings->data[i]->firewall_mark,
+		       mappings->data[i]->destination_port);
+	}
+
+	m_destroy_mark_mappings(mappings);
 
 	exit(0);
 }
