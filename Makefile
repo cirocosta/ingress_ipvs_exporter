@@ -16,10 +16,14 @@ fmt:
 			xargs clang-format -style=file -i
 	go fmt ./...
 
-mapper.out: ./port-mapper/main.c
+port-mapper/mapper.o: ./port-mapper/mapper.c ./port-mapper/mapper.h
+	gcc $< \
+		-c \
+		-o $@
+
+mapper.out: ./port-mapper/main.c port-mapper/mapper.o
 	gcc $^ \
 		-o $@ \
-		-g \
 		-lip4tc \
 		-lxtables
 
