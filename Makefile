@@ -19,6 +19,7 @@ fmt:
 mapper.out: ./port-mapper/main.c
 	gcc $^ \
 		-o $@ \
+		-g \
 		-lip4tc \
 		-lxtables
 

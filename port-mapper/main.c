@@ -113,7 +113,6 @@ main(void)
 {
 	int                     err;
 	struct xtc_handle*      handle;
-	const char*             chain = NULL;
 	const struct ipt_entry* rule;
 	unsigned int            rule_count = 0;
 
@@ -146,7 +145,7 @@ main(void)
 	}
 
 	// count the number of rules
-	rule = iptc_first_rule(chain, handle);
+	rule = iptc_first_rule(M_CHAIN, handle);
 	while (rule) {
 		rule_count += 1;
 		rule = iptc_next_rule(rule, handle);
@@ -159,8 +158,8 @@ main(void)
 
 	// allocate a mark_mappings array that can
 	// fit the expected number of rule mappings
-	m_mark_mapping_t* mark_mappings =
-	  malloc(rule_count * sizeof(mark_mappings));
+	m_mark_mapping_t** mark_mappings =
+	  malloc(rule_count * sizeof(*mark_mappings));
 	if (mark_mappings == NULL) {
 		perror("malloc");
 		fprintf(stderr,
@@ -168,19 +167,29 @@ main(void)
 		        "mark mappings\n");
 		exit(1);
 	}
+	for (unsigned int i = 0; i < rule_count; i++) {
+		mark_mappings[i] = malloc(sizeof *mark_mappings[i]);
+		if (mark_mappings[i] == NULL) {
+			perror("malloc");
+			fprintf(stderr,
+			        "failed to allocate enough memory for "
+			        "mark mapping\n");
+			exit(1);
+		}
+	}
 
 	// populate the array with the mappings
-	rule = iptc_first_rule(chain, handle);
+	rule = iptc_first_rule(M_CHAIN, handle);
 	for (unsigned int __i = 0; __i < rule_count; __i++) {
-		m_get_mark_mapping_from_rule(rule, &mark_mappings[__i]);
+		m_get_mark_mapping_from_rule(rule, mark_mappings[__i]);
 		rule = iptc_next_rule(rule, handle);
 	}
 
 	// show the mappings
 	for (unsigned int __i = 0; __i < rule_count; __i++) {
 		printf("mark=%d,port=%d\n",
-		       mark_mappings[__i].firewall_mark,
-		       mark_mappings[__i].destination_port);
+		       mark_mappings[__i]->firewall_mark,
+		       mark_mappings[__i]->destination_port);
 	}
 
 	exit(0);
