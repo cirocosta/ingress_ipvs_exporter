@@ -14,18 +14,18 @@ test:
 
 
 fmt:
-	find ./port-mapper -name "*.c" -o -name "*.h" | \
+	find ./mapper -name "*.c" -o -name "*.h" | \
 		xargs clang-format -style=file -i
 	go fmt ./...
 
 
-port-mapper/mapper.o: ./port-mapper/mapper.c ./port-mapper/mapper.h
+mapper/mapper.o: ./mapper/mapper.c ./mapper/mapper.h
 	gcc $< \
 		-c \
 		-o $@
 
 
-mapper.out: ./port-mapper/main.c port-mapper/mapper.o
+mapper.out: ./mapper/main.c mapper/mapper.o
 	gcc $^ \
 		-o $@ \
 		-lip4tc \
