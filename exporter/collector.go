@@ -21,6 +21,8 @@ type Collector struct {
 	namespacePath string
 
 	connectionsTotalDesc *prometheus.Desc
+	bytesInTotalDesc     *prometheus.Desc
+	bytesOutTotalDesc    *prometheus.Desc
 	servicesTotalDesc    *prometheus.Desc
 }
 
@@ -79,6 +81,20 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
 
+	c.bytesInTotalDesc = prometheus.NewDesc(
+		"ipvs_bytes_in_total",
+		"The total number of incoming bytes a virtual server",
+		[]string{"fwmark", "port"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.bytesOutTotalDesc = prometheus.NewDesc(
+		"ipvs_bytes_out_total",
+		"The total number of outgoing bytes from a virtual server",
+		[]string{"fwmark", "port"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
 	c.servicesTotalDesc = prometheus.NewDesc(
 		"ipvs_services_total",
 		"The total number of services registered in ipvs",
@@ -92,8 +108,10 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 // Describe sends to the provided channel the set of all configured
 // metric descriptions at the moment of collector registration.
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.connectionsTotalDesc
 	ch <- c.servicesTotalDesc
+	ch <- c.connectionsTotalDesc
+	ch <- c.bytesInTotalDesc
+	ch <- c.bytesOutTotalDesc
 }
 
 // Collect is called by Prometheus when collecting metrics.
@@ -139,12 +157,36 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			Interface("service", service).
 			Msg("reporting service")
 
+		destPort, ok := mappings[service.FWMark]
+		if !ok {
+			c.logger.Warn().
+				Uint32("fwmark", service.FWMark).
+				Msg("couldn't find destination port for fwmark")
+			continue
+		}
+
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionsTotalDesc,
 			prometheus.CounterValue,
 			float64(service.Stats.Connections),
 			strconv.Itoa(int(service.FWMark)),
-			strconv.Itoa(int(mappings[service.FWMark])),
+			strconv.Itoa(int(destPort)),
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.bytesInTotalDesc,
+			prometheus.CounterValue,
+			float64(service.Stats.BytesIn),
+			strconv.Itoa(int(service.FWMark)),
+			strconv.Itoa(int(destPort)),
+		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.bytesOutTotalDesc,
+			prometheus.CounterValue,
+			float64(service.Stats.BytesOut),
+			strconv.Itoa(int(service.FWMark)),
+			strconv.Itoa(int(destPort)),
 		)
 	}
 
