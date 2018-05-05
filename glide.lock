@@ -1,5 +1,5 @@
-hash: 7e540a4cdca1d4ed750d55bd9ffff2df8734eebcb2d59c35748ec3157438487d
-updated: 2018-04-26T18:08:27.353589674Z
+hash: f61d70d501a2d727149031d7db5324c2c998571e84ae3d0535dddfda84aadd45
+updated: 2018-05-05T22:17:58.013422226Z
 imports:
 - name: github.com/alexflint/go-arg
   version: 074ee5f759999d103724b5594e33901adeb28e73
@@ -9,22 +9,22 @@ imports:
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
-- name: github.com/docker/libnetwork
-  version: 9605f3cf99559473dfa6261de058d155af8e1e32
-  subpackages:
-  - ipvs
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
+- name: github.com/hkwi/nlgo
+  version: dbae43f4fc47bf868bca3cc3c1ea2954c2059842
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
+- name: github.com/mqliang/libipvs
+  version: 7fc48254c184ef71e2f10f36bc8aa120873a1485
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/prometheus/client_golang
-  version: 82f5ff156b29e276022b1a958f7d385870fb9814
+  version: 967789050ba94deca04a5e84cce8ad472ce313c1
   subpackages:
   - prometheus
   - prometheus/promhttp
@@ -49,23 +49,9 @@ imports:
   subpackages:
   - internal/cbor
   - internal/json
-- name: github.com/sirupsen/logrus
-  version: 778f2e774c725116edbc3d039dc0dfc1cc62aae8
-- name: github.com/vishvananda/netlink
-  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
-  subpackages:
-  - nl
+  - log
 - name: github.com/vishvananda/netns
   version: be1fbeda19366dea804f00efff2dd73a1642fdcc
-- name: golang.org/x/crypto
-  version: dccd99e89d39b13e12f1103c72e3bc49eb40a833
-  subpackages:
-  - ssh/terminal
-- name: golang.org/x/sys
-  version: bb9c189858d91f42db229b04d45a4c3d23a7662a
-  subpackages:
-  - unix
-  - windows
 testImports:
 - name: github.com/davecgh/go-spew
   version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
@@ -76,9 +62,7 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
   - require
-  - vendor/github.com/davecgh/go-spew/spew
-  - vendor/github.com/pmezard/go-difflib/difflib
