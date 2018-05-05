@@ -2,23 +2,25 @@ package collector
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/cirocosta/ipvs_exporter/mapper"
-	"github.com/docker/libnetwork/ipvs"
+	"github.com/mqliang/libipvs"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
+	"github.com/vishvananda/netns"
 )
 
 // Collector implements the Prometheus Collector interface
 // to provide metrics regarding IPVS in a specified network
 // namespace.
 type Collector struct {
-	logger        zerolog.Logger
-	mapper        *mapper.Mapper
-	ipvs          *ipvs.Handle
-	namespacePath string
+	logger   zerolog.Logger
+	mapper   *mapper.Mapper
+	ipvs     libipvs.IPVSHandle
+	nsHandle *netns.NsHandle
 
 	connectionsTotalDesc *prometheus.Desc
 	bytesInTotalDesc     *prometheus.Desc
@@ -50,7 +52,9 @@ type CollectorConfig struct {
 // descriptions are not registered in the global instance here (see
 // NewExporter).
 func NewCollector(cfg CollectorConfig) (c Collector, err error) {
-	c.ipvs, err = ipvs.New(cfg.NamespacePath)
+	var nsHandle netns.NsHandle
+
+	c.ipvs, err = libipvs.New()
 	if err != nil {
 		err = errors.Wrapf(err,
 			"failed to create ipvs handle for namespace path '%s'",
@@ -58,16 +62,25 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		return
 	}
 
-	fwmarkMapper, err := mapper.NewMapper(mapper.MapperConfig{
-		NamespacePath: cfg.NamespacePath,
-	})
+	if cfg.NamespacePath != "" {
+		nsHandle, err = netns.GetFromPath(cfg.NamespacePath)
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to retrieve ns from path %s",
+				cfg.NamespacePath)
+			return
+		}
+
+		c.nsHandle = &nsHandle
+	}
+
+	fwmarkMapper, err := mapper.NewMapper()
 	if err != nil {
 		err = errors.Wrapf(err,
 			"failed to create fwmarkmapper")
 		return
 	}
 
-	c.namespacePath = cfg.NamespacePath
 	c.mapper = &fwmarkMapper
 	c.logger = zerolog.New(os.Stdout).
 		With().
@@ -105,6 +118,38 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 	return
 }
 
+// RunInNetns executes a given function `f` in the network
+// namespace as configured via `NamespacePath` in
+// `CollectorConfig`.
+func (c *Collector) RunInNetns(f func() (err error)) (err error) {
+	currentNs, err := netns.Get()
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to retrieve current namespace")
+		return
+	}
+
+	runtime.LockOSThread()
+	defer func() {
+		netns.Set(currentNs)
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to get back to original netns")
+		}
+		runtime.UnlockOSThread()
+	}()
+
+	err = netns.Set(*c.nsHandle)
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to set network namespace")
+		return
+	}
+
+	err = f()
+	return
+}
+
 // Describe sends to the provided channel the set of all configured
 // metric descriptions at the moment of collector registration.
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
@@ -120,16 +165,38 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 // channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	var (
-		services []*ipvs.Service
+		services []*libipvs.Service
+		mappings map[uint32]uint16
 		err      error
 	)
 
-	services, err = c.ipvs.GetServices()
+	getIpvsInfo := func() (err error) {
+		services, err = c.ipvs.ListServices()
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to retrieve ipvs services")
+			return
+		}
+
+		mappings, err = c.mapper.GetMappings()
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to retrieve iptables fwmark mappings")
+			return
+		}
+
+		return
+	}
+
+	if c.nsHandle != nil {
+		err = c.RunInNetns(getIpvsInfo)
+	} else {
+		err = getIpvsInfo()
+	}
 	if err != nil {
 		c.logger.Error().
 			Err(err).
-			Str("namespace", c.namespacePath).
-			Msg("failed to retrieve ipvs services")
+			Msg("failed to retrieve ipvs info")
 		return
 	}
 
@@ -140,15 +207,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	)
 
 	if len(services) == 0 {
-		return
-	}
-
-	mappings, err := c.mapper.GetMappings()
-	if err != nil {
-		c.logger.Error().
-			Err(err).
-			Str("namespace", c.namespacePath).
-			Msg("failed to retrieve iptables mappings")
 		return
 	}
 

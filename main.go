@@ -12,7 +12,7 @@ import (
 type config struct {
 	ListenAddress string `arg:"--listen-address,help:address to set the http server to listen to"`
 	TelemetryPath string `arg:"--telemetry-path,help:endpoint to receive scrape requests from prometheus"`
-	NamespacePath string `arg:"--namespace-path,required,help:absolute path to the network namespace where ipv is configured"`
+	NamespacePath string `arg:"--namespace-path,help:absolute path to the network namespace where ipv is configured"`
 }
 
 var (
