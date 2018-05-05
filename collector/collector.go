@@ -172,39 +172,79 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.bytesOutTotalDesc
 }
 
+type ServiceInfo struct {
+	destinationServers []*libipvs.Destination
+	destinationPort    uint16
+	*libipvs.Service
+}
+
+func (c *Collector) GetServicesInfos() (infos []*ServiceInfo, err error) {
+	var (
+		destinations []*libipvs.Destination
+		services     []*libipvs.Service
+		mappings     map[uint32]uint16
+	)
+
+	services, err = c.ipvs.ListServices()
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to retrieve ipvs services")
+		return
+	}
+
+	mappings, err = c.mapper.GetMappings()
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to retrieve iptables fwmark mappings")
+		return
+	}
+
+	infos = make([]*ServiceInfo, len(services))
+	for ndx, service := range services {
+		destPort, ok := mappings[service.FWMark]
+		if !ok {
+			err = errors.Errorf(
+				"couldn't find destination port for fwmark %d",
+				service.FWMark)
+			return
+		}
+
+		destinations, err = c.ipvs.ListDestinations(service)
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to retrieve destinations from service")
+			return
+		}
+
+		infos[ndx] = &ServiceInfo{
+			Service:            service,
+			destinationPort:    destPort,
+			destinationServers: destinations,
+		}
+	}
+
+	return
+}
+
 // Collect is called by Prometheus when collecting metrics.
 // It's meant to list all of the services registered in IPVS in a
 // given namespace and the corresponding metrics to the supplied
 // channel.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	var (
-		services []*libipvs.Service
-		mappings map[uint32]uint16
-		err      error
+		err   error
+		infos []*ServiceInfo
 	)
 
-	getIpvsInfo := func() (err error) {
-		services, err = c.ipvs.ListServices()
-		if err != nil {
-			err = errors.Wrapf(err,
-				"failed to retrieve ipvs services")
-			return
-		}
-
-		mappings, err = c.mapper.GetMappings()
-		if err != nil {
-			err = errors.Wrapf(err,
-				"failed to retrieve iptables fwmark mappings")
-			return
-		}
-
+	f := func() (err error) {
+		infos, err = c.GetServicesInfos()
 		return
 	}
 
 	if c.nsHandle != nil {
-		err = c.RunInNetns(getIpvsInfo)
+		err = c.RunInNetns(f)
 	} else {
-		err = getIpvsInfo()
+		err = f()
 	}
 	if err != nil {
 		c.logger.Error().
@@ -216,48 +256,40 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		c.servicesTotalDesc,
 		prometheus.GaugeValue,
-		float64(len(services)),
+		float64(len(infos)),
 	)
 
-	if len(services) == 0 {
+	if len(infos) == 0 {
 		return
 	}
 
-	for _, service := range services {
+	for _, info := range infos {
 		c.logger.Debug().
-			Interface("service", service).
+			Interface("info", info).
 			Msg("reporting service")
-
-		destPort, ok := mappings[service.FWMark]
-		if !ok {
-			c.logger.Warn().
-				Uint32("fwmark", service.FWMark).
-				Msg("couldn't find destination port for fwmark")
-			continue
-		}
 
 		ch <- prometheus.MustNewConstMetric(
 			c.connectionsTotalDesc,
 			prometheus.CounterValue,
-			float64(service.Stats.Connections),
-			strconv.Itoa(int(service.FWMark)),
-			strconv.Itoa(int(destPort)),
+			float64(info.Stats.Connections),
+			strconv.Itoa(int(info.FWMark)),
+			strconv.Itoa(int(info.destinationPort)),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesInTotalDesc,
 			prometheus.CounterValue,
-			float64(service.Stats.BytesIn),
-			strconv.Itoa(int(service.FWMark)),
-			strconv.Itoa(int(destPort)),
+			float64(info.Stats.BytesIn),
+			strconv.Itoa(int(info.FWMark)),
+			strconv.Itoa(int(info.destinationPort)),
 		)
 
 		ch <- prometheus.MustNewConstMetric(
 			c.bytesOutTotalDesc,
 			prometheus.CounterValue,
-			float64(service.Stats.BytesOut),
-			strconv.Itoa(int(service.FWMark)),
-			strconv.Itoa(int(destPort)),
+			float64(info.Stats.BytesOut),
+			strconv.Itoa(int(info.FWMark)),
+			strconv.Itoa(int(info.destinationPort)),
 		)
 	}
 
