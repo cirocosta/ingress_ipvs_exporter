@@ -54,14 +54,6 @@ type CollectorConfig struct {
 func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 	var nsHandle netns.NsHandle
 
-	c.ipvs, err = libipvs.New()
-	if err != nil {
-		err = errors.Wrapf(err,
-			"failed to create ipvs handle for namespace path '%s'",
-			cfg.NamespacePath)
-		return
-	}
-
 	if cfg.NamespacePath != "" {
 		nsHandle, err = netns.GetFromPath(cfg.NamespacePath)
 		if err != nil {
@@ -72,6 +64,27 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		}
 
 		c.nsHandle = &nsHandle
+	}
+
+	getIpvsHandle := func() (err error) {
+		c.ipvs, err = libipvs.New()
+		if err != nil {
+			err = errors.Wrapf(err,
+				"failed to create ipvs handle for namespace path")
+			return
+		}
+
+		return
+	}
+
+	if c.nsHandle != nil {
+		err = c.RunInNetns(getIpvsHandle)
+	} else {
+		err = getIpvsHandle()
+	}
+	if err != nil {
+		err = errors.Wrapf(err,
+			"failed to retrieve ipvs handle")
 	}
 
 	fwmarkMapper, err := mapper.NewMapper()
