@@ -8,12 +8,10 @@ import (
 
 import (
 	"os"
-	"runtime"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/vishvananda/netns"
 )
 
 func init() {
@@ -24,29 +22,11 @@ func init() {
 	}
 }
 
-type MapperConfig struct {
-	NamespacePath string
-}
-
 type Mapper struct {
-	nsHandle netns.NsHandle
-	logger   zerolog.Logger
+	logger zerolog.Logger
 }
 
-func NewMapper(cfg MapperConfig) (m Mapper, err error) {
-	if cfg.NamespacePath == "" {
-		err = errors.Errorf("NamespacePath must be provided")
-		return
-	}
-
-	m.nsHandle, err = netns.GetFromPath(cfg.NamespacePath)
-	if err != nil {
-		err = errors.Wrapf(err,
-			"failed to retrieve ns from path %s",
-			cfg.NamespacePath)
-		return
-	}
-
+func NewMapper() (m Mapper, err error) {
 	m.logger = zerolog.New(os.Stdout).
 		With().
 		Str("from", "mapper").
@@ -56,30 +36,6 @@ func NewMapper(cfg MapperConfig) (m Mapper, err error) {
 }
 
 func (m Mapper) GetMappings() (res map[uint32]uint16, err error) {
-	currentNs, err := netns.Get()
-	if err != nil {
-		err = errors.Wrapf(err,
-			"failed to retrieve current namespace")
-		return
-	}
-
-	runtime.LockOSThread()
-	defer func() {
-		netns.Set(currentNs)
-		if err != nil {
-			err = errors.Wrapf(err,
-				"failed to get back to original netns")
-		}
-		runtime.UnlockOSThread()
-	}()
-
-	err = netns.Set(m.nsHandle)
-	if err != nil {
-		err = errors.Wrapf(err,
-			"failed to set network namespace")
-		return
-	}
-
 	mappings := C.m_get_mark_mappings()
 	if mappings == nil {
 		return
