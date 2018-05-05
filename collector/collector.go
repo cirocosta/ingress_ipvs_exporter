@@ -22,10 +22,18 @@ type Collector struct {
 	ipvs     libipvs.IPVSHandle
 	nsHandle *netns.NsHandle
 
+	servicesTotalDesc *prometheus.Desc
+
 	connectionsTotalDesc *prometheus.Desc
 	bytesInTotalDesc     *prometheus.Desc
 	bytesOutTotalDesc    *prometheus.Desc
-	servicesTotalDesc    *prometheus.Desc
+
+	destActiveConsDesc       *prometheus.Desc
+	destInactConnsDest       *prometheus.Desc
+	destBytesInDesc          *prometheus.Desc
+	destBytesOutDesc         *prometheus.Desc
+	destConnectionsTotalDesc *prometheus.Desc
+	destTotalDesc            *prometheus.Desc
 }
 
 // CollectorConfig provides the necessary configuration for
@@ -100,6 +108,13 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		Str("from", "collector").
 		Logger()
 
+	c.servicesTotalDesc = prometheus.NewDesc(
+		"ipvs_services_total",
+		"The total number of services registered in ipvs",
+		nil,
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
 	c.connectionsTotalDesc = prometheus.NewDesc(
 		"ipvs_connections_total",
 		"The total number of connections made to a virtual server",
@@ -121,10 +136,45 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
 
-	c.servicesTotalDesc = prometheus.NewDesc(
-		"ipvs_services_total",
-		"The total number of services registered in ipvs",
-		nil,
+	c.destTotalDesc = prometheus.NewDesc(
+		"ipvs_destination_total",
+		"The total number of real servers that are destinations to the service",
+		[]string{"fwmark", "port"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.destActiveConsDesc = prometheus.NewDesc(
+		"ipvs_destination_active_connections_total",
+		"The total number of connections established to a destination server",
+		[]string{"fwmark", "port", "address"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.destInactConnsDest = prometheus.NewDesc(
+		"ipvs_destination_inactive_connections_total",
+		"The total number of connections inactive but established to a destination server",
+		[]string{"fwmark", "port", "address"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.destBytesInDesc = prometheus.NewDesc(
+		"ipvs_destination_bytes_in_total",
+		"The total number of incoming bytes to a real server",
+		[]string{"fwmark", "port", "address"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.destBytesOutDesc = prometheus.NewDesc(
+		"ipvs_destination_bytes_out_total",
+		"The total number of outgoing bytes to a real server",
+		[]string{"fwmark", "port", "address"},
+		prometheus.Labels{"namespace": cfg.NamespacePath},
+	)
+
+	c.destConnectionsTotalDesc = prometheus.NewDesc(
+		"ipvs_destination_connections_total",
+		"The total number connections ever established to a destination",
+		[]string{"fwmark", "port", "address"},
 		prometheus.Labels{"namespace": cfg.NamespacePath},
 	)
 
@@ -167,9 +217,17 @@ func (c *Collector) RunInNetns(f func() (err error)) (err error) {
 // metric descriptions at the moment of collector registration.
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.servicesTotalDesc
+
 	ch <- c.connectionsTotalDesc
 	ch <- c.bytesInTotalDesc
 	ch <- c.bytesOutTotalDesc
+
+	ch <- c.destActiveConsDesc
+	ch <- c.destInactConnsDest
+	ch <- c.destBytesInDesc
+	ch <- c.destBytesOutDesc
+	ch <- c.destConnectionsTotalDesc
+	ch <- c.destTotalDesc
 }
 
 type ServiceInfo struct {
@@ -291,6 +349,62 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			strconv.Itoa(int(info.FWMark)),
 			strconv.Itoa(int(info.destinationPort)),
 		)
+
+		ch <- prometheus.MustNewConstMetric(
+			c.destTotalDesc,
+			prometheus.GaugeValue,
+			float64(len(info.destinationServers)),
+			strconv.Itoa(int(info.FWMark)),
+			strconv.Itoa(int(info.destinationPort)),
+		)
+
+		for _, destination := range info.destinationServers {
+
+			ch <- prometheus.MustNewConstMetric(
+				c.destActiveConsDesc,
+				prometheus.GaugeValue,
+				float64(destination.ActiveConns),
+				strconv.Itoa(int(info.FWMark)),
+				strconv.Itoa(int(info.destinationPort)),
+				destination.Address.String(),
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.destInactConnsDest,
+				prometheus.GaugeValue,
+				float64(destination.InactConns),
+				strconv.Itoa(int(info.FWMark)),
+				strconv.Itoa(int(info.destinationPort)),
+				destination.Address.String(),
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.destBytesInDesc,
+				prometheus.CounterValue,
+				float64(destination.Stats.BytesIn),
+				strconv.Itoa(int(info.FWMark)),
+				strconv.Itoa(int(info.destinationPort)),
+				destination.Address.String(),
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.destBytesOutDesc,
+				prometheus.CounterValue,
+				float64(destination.Stats.BytesOut),
+				strconv.Itoa(int(info.FWMark)),
+				strconv.Itoa(int(info.destinationPort)),
+				destination.Address.String(),
+			)
+
+			ch <- prometheus.MustNewConstMetric(
+				c.destConnectionsTotalDesc,
+				prometheus.CounterValue,
+				float64(destination.Stats.Connections),
+				strconv.Itoa(int(info.FWMark)),
+				strconv.Itoa(int(info.destinationPort)),
+				destination.Address.String(),
+			)
+		}
 	}
 
 	return
