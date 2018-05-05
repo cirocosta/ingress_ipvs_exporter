@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/cirocosta/ipvs_exporter/collector"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -40,7 +41,7 @@ type ExporterConfig struct {
 	// implements the Prometheus collector interface so
 	// prometheus can ask it for metrics and metric descriptions
 	// to expose under the configured telemetry path.
-	Collector *Collector
+	Collector *collector.Collector
 }
 
 // Exporter is responsible for initiating the Prometheus HTTP
@@ -51,7 +52,7 @@ type ExporterConfig struct {
 type Exporter struct {
 	listenAddress string
 	telemetryPath string
-	collector     *Collector
+	collector     *collector.Collector
 	logger        zerolog.Logger
 }
 

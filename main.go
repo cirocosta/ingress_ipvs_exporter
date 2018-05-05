@@ -4,9 +4,9 @@ import (
 	"os"
 
 	"github.com/alexflint/go-arg"
+	"github.com/cirocosta/ipvs_exporter/collector"
+	"github.com/cirocosta/ipvs_exporter/exporter"
 	"github.com/rs/zerolog"
-
-	. "github.com/cirocosta/ipvs_exporter/exporter"
 )
 
 type config struct {
@@ -38,12 +38,12 @@ func must(err error) {
 func main() {
 	arg.MustParse(args)
 
-	collector, err := NewCollector(CollectorConfig{
+	collector, err := collector.NewCollector(collector.CollectorConfig{
 		NamespacePath: args.NamespacePath,
 	})
 	must(err)
 
-	exporter, err := NewExporter(ExporterConfig{
+	exporter, err := exporter.NewExporter(exporter.ExporterConfig{
 		ListenAddress: args.ListenAddress,
 		TelemetryPath: args.TelemetryPath,
 		Collector:     &collector,

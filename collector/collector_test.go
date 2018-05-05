@@ -1,4 +1,4 @@
-package exporter
+package collector
 
 import (
 	"os/exec"
