@@ -19,7 +19,7 @@ var (
 	args = &config{
 		ListenAddress: ":9100",
 		TelemetryPath: "/metrics",
-		NamespacePath: "",
+		NamespacePath: "/var/run/docker/netns/ingress_sbox",
 	}
 	logger = zerolog.New(os.Stdout)
 )
