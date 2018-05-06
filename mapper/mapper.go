@@ -1,3 +1,6 @@
+// mapper defines the necessary methods for inspecting iptables
+// and retrieving `fwmark <--> destination_port` tuples from the
+// mangle table.
 package mapper
 
 // #cgo LDFLAGS: -lip4tc -lxtables
@@ -10,10 +13,13 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
+// init initializes the internal iptables global variables.
+//
+// ps.: it doesn't need to be network namespace-aware as it
+// doesn't touch any networking subsystem.
 func init() {
 	errno := C.m_init()
 	if errno != 0 {
@@ -22,20 +28,10 @@ func init() {
 	}
 }
 
-type Mapper struct {
-	logger zerolog.Logger
-}
-
-func NewMapper() (m Mapper, err error) {
-	m.logger = zerolog.New(os.Stdout).
-		With().
-		Str("from", "mapper").
-		Logger()
-
-	return
-}
-
-func (m Mapper) GetMappings() (res map[uint32]uint16, err error) {
+// GetMappings retrieves a map that represents how fwmark
+// entries are related to destination ports in the mangle
+// iptables table (in the current network namespace).
+func GetMappings() (res map[uint32]uint16, err error) {
 	mappings := C.m_get_mark_mappings()
 	if mappings == nil {
 		return

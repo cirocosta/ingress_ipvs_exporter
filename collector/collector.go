@@ -1,3 +1,7 @@
+// collector package declares the Collector struct that implements
+// the prometheus Collector interface as is capable of retrieving
+// all the necessary metrics for it (prometheus) by making calls
+// via netlink to the ipvs subsystem as well as iptables (see `mapper`).
 package collector
 
 import (
@@ -18,7 +22,6 @@ import (
 // namespace.
 type Collector struct {
 	logger   zerolog.Logger
-	mapper   *mapper.Mapper
 	ipvs     libipvs.IPVSHandle
 	nsHandle *netns.NsHandle
 
@@ -95,14 +98,6 @@ func NewCollector(cfg CollectorConfig) (c Collector, err error) {
 			"failed to retrieve ipvs handle")
 	}
 
-	fwmarkMapper, err := mapper.NewMapper()
-	if err != nil {
-		err = errors.Wrapf(err,
-			"failed to create fwmarkmapper")
-		return
-	}
-
-	c.mapper = &fwmarkMapper
 	c.logger = zerolog.New(os.Stdout).
 		With().
 		Str("from", "collector").
@@ -230,12 +225,13 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.destTotalDesc
 }
 
-type ServiceInfo struct {
-	destinationServers []*libipvs.Destination
-	destinationPort    uint16
-	*libipvs.Service
-}
-
+// GetServicesInfos retrieves a list of services and then, for
+// each service, enhances it with extra information that is gathered
+// from subsequent calls via netlink and by inspecting iptables.
+//
+// This results in list of ServiceInfo objects that have all the necessary
+// information regarding an IPVS service and how it links itself to real
+// servers.
 func (c *Collector) GetServicesInfos() (infos []*ServiceInfo, err error) {
 	var (
 		destinations []*libipvs.Destination
@@ -250,7 +246,7 @@ func (c *Collector) GetServicesInfos() (infos []*ServiceInfo, err error) {
 		return
 	}
 
-	mappings, err = c.mapper.GetMappings()
+	mappings, err = mapper.GetMappings()
 	if err != nil {
 		err = errors.Wrapf(err,
 			"failed to retrieve iptables fwmark mappings")
