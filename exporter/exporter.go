@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/cirocosta/ipvs_exporter/collector"
+	"github.com/cirocosta/ingress_ipvs_exporter/collector"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

@@ -1,6 +1,6 @@
 VERSION             := $(shell cat ./VERSION)
 COMMIT_SHA          := $(shell git rev-parse --short HEAD)
-DOCKER_FINAL_IMAGE  := cirocosta/ipvs_exporter
+DOCKER_FINAL_IMAGE  := cirocosta/ingress_ipvs_exporter
 
 all: install
 

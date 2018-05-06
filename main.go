@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/alexflint/go-arg"
-	"github.com/cirocosta/ipvs_exporter/collector"
-	"github.com/cirocosta/ipvs_exporter/exporter"
+	"github.com/cirocosta/ingress_ipvs_exporter/collector"
+	"github.com/cirocosta/ingress_ipvs_exporter/exporter"
 	"github.com/rs/zerolog"
 )
 

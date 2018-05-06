@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/cirocosta/ipvs_exporter/mapper"
+	"github.com/cirocosta/ingress_ipvs_exporter/mapper"
 	"github.com/mqliang/libipvs"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"

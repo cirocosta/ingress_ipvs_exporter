@@ -9,7 +9,7 @@
 `ingress_ipvs_exporter` is a [Prometheus](https://prometheus.io/) exporter focused on delivering statistics gathered via netlink regarding IPVS services that live inside the docker swarm's ingress network namespace.
 
 ```sh
-Usage: ipvs_exporter 
+Usage: ingress_ipvs_exporter 
 	[--listen-address LISTEN-ADDRESS] 
 	[--telemetry-path TELEMETRY-PATH] 
 	[--namespace-path NAMESPACE-PATH]
@@ -75,7 +75,7 @@ for i in $(seq 1 10); do
 done
 
 # Start the exporter
-sudo ipvs_exporter
+sudo ingress_ipvs_exporter
 
 # Check the metrics captured (stripped the other 
 # services for better readability).
