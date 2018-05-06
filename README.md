@@ -34,16 +34,16 @@ It exports the following metrics:
 
 
 ```
-ipvs_bytes_in_total The total number of incoming bytes a virtual server
-ipvs_bytes_out_total The total number of outgoing bytes from a virtual server
-ipvs_connections_total The total number of connections made to a virtual server
-ipvs_destination_active_connections_total The total number of connections established to a destination server
-ipvs_destination_bytes_in_total The total number of incoming bytes to a real server
-ipvs_destination_bytes_out_total The total number of outgoing bytes to a real server
-ipvs_destination_connections_total The total number connections ever established to a destination
-ipvs_destination_inactive_connections_total The total number of connections inactive but established to a destination server
-ipvs_destination_total The total number of real servers that are destinations to the service
-ipvs_services_total The total number of services registered in ipvs
+ipvs_bytes_in_total                             The total number of incoming bytes a virtual server
+ipvs_bytes_out_total                            The total number of outgoing bytes from a virtual server
+ipvs_connections_total                          The total number of connections made to a virtual server
+ipvs_destination_active_connections_total       The total number of connections established to a destination server
+ipvs_destination_bytes_in_total                 The total number of incoming bytes to a real server
+ipvs_destination_bytes_out_total                The total number of outgoing bytes to a real server
+ipvs_destination_connections_total              The total number connections ever established to a destination
+ipvs_destination_inactive_connections_total     The total number of connections inactive but established to a destination server
+ipvs_destination_total                          The total number of real servers that are destinations to the service
+ipvs_services_total                             The total number of services registered in ipvs
 ```
 
 Example:
